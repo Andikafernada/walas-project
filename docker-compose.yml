@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  # =============================================
+  # WALAS PRO LARAVEL APPLICATION
+  # =============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: walas-pro-app:latest
+    container_name: walas-pro-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./storage:/var/www/storage/app
+      - ./bootstrap/cache:/var/www/bootstrap/cache
+      - .env:/var/www/.env
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    networks:
+      - walas-net
+    depends_on:
+      - db
+      - redis
+      - n8n
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # =============================================
+  # MYSQL DATABASE
+  # =============================================
+  db:
+    image: mysql:8.0
+    container_name: walas-pro-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-rootpass123}
+      MYSQL_DATABASE: ${DB_DATABASE:-walas_pro}
+      MYSQL_USER: ${DB_USERNAME:-walas}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-walas_secure}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - walas-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # =============================================
+  # REDIS CACHE & QUEUE
+  # =============================================
+  redis:
+    image: redis:7-alpine
+    container_name: walas-pro-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - walas-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  # =============================================
+  # N8N WORKFLOW AUTOMATION
+  # =============================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: walas-pro-n8n
+    restart: unless-stopped
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER: admin
+      - N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:-n8n_secure_pass}
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-https://n8n.walas.my.id}
+      - NODE_ENV=production
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - walas-net
+
+  # =============================================
+  # NGINX REVERSE PROXY
+  # =============================================
+  nginx:
+    image: nginx:alpine
+    container_name: walas-pro-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    networks:
+      - walas-net
+    depends_on:
+      - app
+
+  # =============================================
+  # CERTBOT SSL (Let's Encrypt)
+  # =============================================
+  certbot:
+    image: certbot/certbot:latest
+    container_name: walas-pro-certbot
+    entrypoint: "/bin/sh -c"
+    command: "trap exit TERM INT; certbot -n -d walas.my.id -d api.walas.my.id --manual-auth-hook /docker-entrypoint.sh certbot -d walas.my.id --deploy-hook 'nginx -s reload' --manual-cleanup-hook 'certbot renew --keep-broken'
+    volumes:
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  walas-net:
+    driver: bridge
+
+volumes:
+  db_data:
+  redis_data:
+  n8n_data:
