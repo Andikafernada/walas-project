@@ -20,6 +20,9 @@ Schedule::command('sessions:clean --days=90')->weekly();
 // Process WhatsApp queue every minute
 Schedule::command('wa:process --limit=50')->everyMinute();
 
+// Auto send attendance link based on schedule (every minute, weekdays)
+Schedule::command('walas:auto-attendance')->weekdays()->everyMinute();
+
 // Generate daily attendance at 6 AM on weekdays
 Schedule::command('scheduler:run --daily')->weekdays()->at('06:00');
 

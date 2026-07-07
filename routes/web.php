@@ -45,6 +45,24 @@ Route::post('/absensi/{session}/submit', [PublicAttendanceController::class, 'su
 
 /*
 |--------------------------------------------------------------------------
+| WhatsApp Bot Routes
+|--------------------------------------------------------------------------
+*/
+Route::prefix('whatsapp-bot')->group(function () {
+    Route::get('/', [App\Http\Controllers\WhatsAppBotController::class, 'index'])
+        ->name('whatsapp-bot.index');
+    Route::post('/generate-qr', [App\Http\Controllers\WhatsAppBotController::class, 'generateQr'])
+        ->name('whatsapp-bot.generate-qr');
+    Route::get('/status', [App\Http\Controllers\WhatsAppBotController::class, 'status'])
+        ->name('whatsapp-bot.status');
+    Route::post('/disconnect', [App\Http\Controllers\WhatsAppBotController::class, 'disconnect'])
+        ->name('whatsapp-bot.disconnect');
+    Route::post('/send-test', [App\Http\Controllers\WhatsAppBotController::class, 'sendTest'])
+        ->name('whatsapp-bot.send-test');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Google OAuth Routes
 |--------------------------------------------------------------------------
 */
