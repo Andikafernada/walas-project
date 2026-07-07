@@ -94,4 +94,15 @@ class Organization extends Model
 
         return $slug;
     }
+
+    // Scopes
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopeOfType($query, $type)
+    {
+        return $query->where('type', $type);
+    }
 }
