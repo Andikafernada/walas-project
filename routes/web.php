@@ -100,7 +100,7 @@ Route::middleware(['auth', 'verified', 'activity'])->group(function () {
     | Classes
     |--------------------------------------------------------------------------
     */
-    Route::middleware(['subscription'])->group(function () {
+    Route::group(function () {
 
         Route::resource('classes', ClassController::class);
 
@@ -292,7 +292,7 @@ Route::middleware(['auth', 'verified', 'activity'])->group(function () {
     | API Tokens (Pro Only)
     |--------------------------------------------------------------------------
     */
-    Route::middleware(['subscription:api_access'])->prefix('api-tokens')->group(function () {
+    Route::prefix('api-tokens')->group(function () {
         Route::get('/', [ApiTokenController::class, 'index'])
             ->name('api-tokens.index');
         Route::post('/', [ApiTokenController::class, 'store'])
