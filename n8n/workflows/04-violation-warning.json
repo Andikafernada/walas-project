@@ -1,0 +1,203 @@
+{
+  "name": "WaliKelas Pro - Violation Warning Sender",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "violation-warning",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "walas-violation-warning"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WALAS_API_URL }}/api/v1/reports/student/{{ $json.body.student_id }}/violations",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WALAS_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-student-data",
+      "name": "Get Student Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "student_name",
+              "value": "={{ $('Get Student Data').item.json.student.name }}"
+            },
+            {
+              "name": "parent_name",
+              "value": "={{ $json.body.parent_name }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $json.body.phone }}"
+            },
+            {
+              "name": "category",
+              "value": "={{ $json.body.category }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ $json.body.description }}"
+            },
+            {
+              "name": "severity",
+              "value": "={{ $json.body.severity }}"
+            },
+            {
+              "name": "poin_reduced",
+              "value": "={{ $json.body.poin_reduced }}"
+            },
+            {
+              "name": "poin_after",
+              "value": "={{ $json.body.poin_after }}"
+            },
+            {
+              "name": "date",
+              "value": "={{ $json.body.date }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-warning-data",
+      "name": "Set Warning Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "has-phone",
+              "leftValue": "={{ $json.phone }}",
+              "rightValue": "",
+              "operation": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-phone",
+      "name": "Has Phone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://mu.fonnte.com/api/send",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $env.FONNTE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "target",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "message",
+              "value": "=⚠️ *PERINGATAN PELANGGARAN*\n\nYth. Bapak/Ibu {{ $json.parent_name }},\nPutra/i: *{{ $json.student_name }}*\n\nTerdapat pelanggaran yang tercatat:\n\n📋 Kategori: {{ $json.category }}\n📝 Keterangan: {{ $json.description }}\n⚖️ Tingkat: {{ $json.severity }}\n📉 Poin: -{{ $json.poin_reduced }}\n📅 Tanggal: {{ $json.date }}\n\nTotal Poin Sekarang: *{{ $json.poin_after }}*\n\n_Silakan hubungi wali kelas untuk informasi lebih lanjut._\n_WaliKelas Pro_"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-warning",
+      "name": "Send Warning",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": true,
+          "message": "Warning sent"
+        }
+      },
+      "id": "success-response",
+      "name": "Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": true,
+          "message": "No phone number available, skipped"
+        }
+      },
+      "id": "skip-response",
+      "name": "Skipped",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Get Student Data", "type": "main", "index": 0 }]]
+    },
+    "Get Student Data": {
+      "main": [[{ "node": "Set Warning Data", "type": "main", "index": 0 }]]
+    },
+    "Set Warning Data": {
+      "main": [[{ "node": "Has Phone?", "type": "main", "index": 0 }]]
+    },
+    "Has Phone?": {
+      "main": [
+        [{ "node": "Send Warning", "type": "main", "index": 0 }],
+        [{ "node": "Skipped", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Warning": {
+      "main": [[{ "node": "Success", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": ["violation", "warning", "walas-pro"],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,222 @@
+{
+  "name": "WaliKelas Pro - Scheduled Attendance Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger (Weekdays 6 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WALAS_API_URL }}/api/v1/attendance/summary",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WALAS_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "month",
+              "value": "={{ $now.format('YYYY-MM') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-summary",
+      "name": "Get Attendance Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "has-pending",
+              "leftValue": "={{ $('Get Attendance Summary').item.json.data }}",
+              "rightValue": "",
+              "operation": {
+                "type": "string",
+                "operation": "notEqual"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-data",
+      "name": "Has Pending?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "id": "split-classes",
+      "name": "Split Classes",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WALAS_API_URL }}/api/attendance/generate",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WALAS_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "class_id",
+              "value": "={{ $json.class_id }}"
+            },
+            {
+              "name": "date",
+              "value": "={{ $now.format('YYYY-MM-DD') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "generate-link",
+      "name": "Generate Link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "wait": {
+          "amount": 2000
+        },
+        "options": {}
+      },
+      "id": "delay",
+      "name": "Delay",
+      "type": "n8n-nodes-base.delay",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "more-items",
+              "leftValue": "={{ $json.done }}",
+              "rightValue": false,
+              "operation": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-more",
+      "name": "More Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "done",
+              "leftValue": "={{ $('Get Attendance Summary').item.json.data }}",
+              "rightValue": "",
+              "operation": {
+                "type": "string",
+                "operation": "notExists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-done",
+      "name": "All Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1650, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (Weekdays 6 AM)": {
+      "main": [[{ "node": "Get Attendance Summary", "type": "main", "index": 0 }]]
+    },
+    "Get Attendance Summary": {
+      "main": [[{ "node": "Has Pending?", "type": "main", "index": 0 }]]
+    },
+    "Has Pending?": {
+      "main": [
+        [{ "node": "Split Classes", "type": "main", "index": 0 }]
+      ]
+    },
+    "Split Classes": {
+      "main": [[{ "node": "Generate Link", "type": "main", "index": 0 }]]
+    },
+    "Generate Link": {
+      "main": [[{ "node": "Delay", "type": "main", "index": 0 }]]
+    },
+    "Delay": {
+      "main": [[{ "node": "More Items?", "type": "main", "index": 0 }]]
+    },
+    "More Items?": {
+      "main": [
+        [{ "node": "Split Classes", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": ["scheduled", "attendance", "automation", "walas-pro"],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}

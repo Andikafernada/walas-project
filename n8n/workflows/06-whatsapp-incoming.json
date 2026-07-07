@@ -1,0 +1,325 @@
+{
+  "name": "WaliKelas Pro - WhatsApp Incoming Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-incoming",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "walas-whatsapp-incoming"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "from",
+              "value": "={{ $json.body.from }}"
+            },
+            {
+              "name": "body",
+              "value": "={{ $json.body.body }}"
+            },
+            {
+              "name": "message_id",
+              "value": "={{ $json.body.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-message",
+      "name": "Set Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "id": "menu",
+              "leftValue": "={{ $upper($json.body) }}",
+              "rightValue": "MENU",
+              "operation": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "check-menu",
+      "name": "Check MENU",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [650, 150],
+      "rules": {
+        "rules": [
+          {
+            "name": "MENU",
+            "conditions": {
+              "options": { "caseSensitive": false },
+              "conditions": [
+                {
+                  "id": "menu-condition",
+                  "leftValue": "={{ $upper($json.body) }}",
+                  "rightValue": "MENU",
+                  "operation": { "type": "string", "operation": "equals" }
+                }
+              ],
+              "combinator": "and"
+            },
+            "output": "Menu Response"
+          },
+          {
+            "name": "ABSENSI",
+            "conditions": {
+              "options": { "caseSensitive": false },
+              "conditions": [
+                {
+                  "id": "absensi-condition",
+                  "leftValue": "={{ $upper($json.body) }}",
+                  "rightValue": "ABSENSI",
+                  "operation": { "type": "string", "operation": "equals" }
+                }
+              ],
+              "combinator": "and"
+            },
+            "output": "Absensi Response"
+          },
+          {
+            "name": "STATUS",
+            "conditions": {
+              "options": { "caseSensitive": false },
+              "conditions": [
+                {
+                  "id": "status-condition",
+                  "leftValue": "={{ $upper($json.body) }}",
+                  "rightValue": "STATUS",
+                  "operation": { "type": "string", "operation": "equals" }
+                }
+              ],
+              "combinator": "and"
+            },
+            "output": "Status Response"
+          },
+          {
+            "name": "HELP",
+            "conditions": {
+              "options": { "caseSensitive": false },
+              "conditions": [
+                {
+                  "id": "help-condition",
+                  "leftValue": "={{ $upper($json.body) }}",
+                  "rightValue": "HELP",
+                  "operation": { "type": "string", "operation": "equals" }
+                }
+              ],
+              "combinator": "and"
+            },
+            "output": "Help Response"
+          }
+        ],
+        "fallbackOutput": "Unknown Response"
+      }
+    },
+    {
+      "parameters": {
+        "message": "=*MENU WALI KELAS PRO*\n\nSelamat datang di WaliKelas Pro!\n\nKetik perintah berikut:\n\n1. *MENU* - Lihat menu ini\n2. *ABSENSI* - Status absensi hari ini\n3. *STATUS* - Status akun Anda\n4. *HELP* - Bantuan\n\n_Hubungi WaliKelas Pro untuk informasi lebih lanjut_",
+        "options": {}
+      },
+      "id": "menu-response",
+      "name": "Menu Response",
+      "type": "n8n-nodes-base.set node",
+      "typeVersion": 1,
+      "position": [850, 50]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WALAS_API_URL }}/api/v1/attendance/status",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WALAS_API_KEY }}",
+              "options": {}
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $json.from }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-absensi",
+      "name": "Get Absensi Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 150]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "message",
+              "value": "=📊 *STATUS AKUN*\n\nSilakan cek status melalui aplikasi WaliKelas Pro"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "status-response",
+      "name": "Status Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [850, 250]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "message",
+              "value": "=❓ *BANTUAN*\n\nHubungi admin untuk bantuan:\n📧 support@walaskelas.pro\n📱 WhatsApp: 08xxxxxxxxxx\n\n_WaliKelas Pro - Solusi Administrasi Wali Kelas_"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "help-response",
+      "name": "Help Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [850, 350]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "message",
+              "value": "❌ *Perintah tidak dikenali*\n\nKetik *MENU* untuk melihat perintah yang tersedia."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "unknown-response",
+      "name": "Unknown Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [850, 450]
+    },
+    {
+      "parameters": {
+        "url": "https://mu.fonnte.com/api/send",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $env.FONNTE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "target",
+              "value": "={{ $json.from }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-reply",
+      "name": "Send Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "status": "ok"
+        }
+      },
+      "id": "respond-ok",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Set Message", "type": "main", "index": 0 }]]
+    },
+    "Set Message": {
+      "main": [[{ "node": "Check MENU", "type": "main", "index": 0 }]]
+    },
+    "Check MENU": {
+      "main": [
+        [{ "node": "Menu Response", "type": "main", "index": 0 }],
+        [{ "node": "Get Absensi Status", "type": "main", "index": 0 }],
+        [{ "node": "Status Response", "type": "main", "index": 0 }],
+        [{ "node": "Help Response", "type": "main", "index": 0 }],
+        [{ "node": "Unknown Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Menu Response": {
+      "main": [[{ "node": "Send Reply", "type": "main", "index": 0 }]]
+    },
+    "Get Absensi Status": {
+      "main": [[{ "node": "Send Reply", "type": "main", "index": 0 }]]
+    },
+    "Status Response": {
+      "main": [[{ "node": "Send Reply", "type": "main", "index": 0 }]]
+    },
+    "Help Response": {
+      "main": [[{ "node": "Send Reply", "type": "main", "index": 0 }]]
+    },
+    "Unknown Response": {
+      "main": [[{ "node": "Send Reply", "type": "main", "index": 0 }]]
+    },
+    "Send Reply": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": ["whatsapp", "incoming", "automation", "walas-pro"],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,135 @@
+{
+  "name": "WaliKelas Pro - Exam Session Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "exam-start",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "walas-exam-start"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "session_id",
+              "value": "={{ $json.body.session_id }}"
+            },
+            {
+              "name": "exam_name",
+              "value": "={{ $json.body.exam_name }}"
+            },
+            {
+              "name": "class_id",
+              "value": "={{ $json.body.class_id }}"
+            },
+            {
+              "name": "start_time",
+              "value": "={{ $json.body.start_time }}"
+            },
+            {
+              "name": "end_time",
+              "value": "={{ $json.body.end_time }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-exam-data",
+      "name": "Set Exam Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WALAS_API_URL }}/api/v1/exam/start",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WALAS_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "session_id",
+              "value": "={{ $json.session_id }}"
+            },
+            {
+              "name": "exam_name",
+              "value": "={{ $json.exam_name }}"
+            },
+            {
+              "name": "class_id",
+              "value": "={{ $json.class_id }}"
+            },
+            {
+              "name": "start_time",
+              "value": "={{ $json.start_time }}"
+            },
+            {
+              "name": "end_time",
+              "value": "={{ $json.end_time }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-exam-session",
+      "name": "Create Exam Session",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": true,
+          "session_id": "={{ $('Set Exam Data').item.json.session_id }}",
+          "students": "={{ $('Create Exam Session').item.json.students }}"
+        }
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Set Exam Data", "type": "main", "index": 0 }]]
+    },
+    "Set Exam Data": {
+      "main": [[{ "node": "Create Exam Session", "type": "main", "index": 0 }]]
+    },
+    "Create Exam Session": {
+      "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": ["exam", "monitoring", "cbt", "walas-pro"],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}

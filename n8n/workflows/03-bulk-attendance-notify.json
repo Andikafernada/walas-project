@@ -1,0 +1,209 @@
+{
+  "name": "WaliKelas Pro - Bulk Attendance Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "attendance-bulk-notify",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "walas-attendance-bulk"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WALAS_API_URL }}/api/v1/attendance",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WALAS_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "class_id",
+              "value": "={{ $json.body.class_id }}"
+            },
+            {
+              "name": "date_from",
+              "value": "={{ $json.body.date_from }}"
+            },
+            {
+              "name": "date_to",
+              "value": "={{ $json.body.date_to }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-attendances",
+      "name": "Get Attendances",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "split-in-batches",
+      "name": "Split in Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://mu.fonnte.com/api/send",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $env.FONNTE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "target",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "message",
+              "value": "=📩 *LAPORAN ABSENSI*\n\nYth. Bapak/Ibu {{ $json.parent_name }}\nPutra/i: *{{ $json.student_name }}*\nKelas: {{ $json.class_name }}\nTanggal: {{ $json.date }}\n\nStatus: *{{ $json.status }}*\n\n_WaliKelas Pro_"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-notification",
+      "name": "Send Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "wait": {
+          "amount": 1500
+        },
+        "options": {}
+      },
+      "id": "delay",
+      "name": "Delay (Rate Limit)",
+      "type": "n8n-nodes-base.delay",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "more-items",
+              "leftValue": "={{ $json.done }}",
+              "rightValue": false,
+              "operation": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-more",
+      "name": "More Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "loop-back",
+              "leftValue": "={{ $('Get Attendances').item.json.done }}",
+              "rightValue": false,
+              "operation": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "back-to-get",
+      "name": "Loop Back?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "success": true,
+          "message": "Bulk notifications completed",
+          "total_sent": "={{ $json.sent }}"
+        }
+      },
+      "id": "success-response",
+      "name": "Complete",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Get Attendances", "type": "main", "index": 0 }]]
+    },
+    "Get Attendances": {
+      "main": [[{ "node": "Split in Batches", "type": "main", "index": 0 }]]
+    },
+    "Split in Batches": {
+      "main": [[{ "node": "Send Notification", "type": "main", "index": 0 }]]
+    },
+    "Send Notification": {
+      "main": [[{ "node": "Delay (Rate Limit)", "type": "main", "index": 0 }]]
+    },
+    "Delay (Rate Limit)": {
+      "main": [[{ "node": "More Items?", "type": "main", "index": 0 }]]
+    },
+    "More Items?": {
+      "main": [
+        [{ "node": "Split in Batches", "type": "main", "index": 0 }],
+        [{ "node": "Complete", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": ["attendance", "notification", "walas-pro"],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
