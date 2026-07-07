@@ -20,10 +20,17 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Public Routes (No Authentication Required)
+| Landing Page
 |--------------------------------------------------------------------------
 */
-Route::get('/', fn() => redirect()->route('login'));
+Route::get('/', fn() => view('welcome'))->name('welcome');
+
+/*
+|--------------------------------------------------------------------------
+| Demo Page
+|--------------------------------------------------------------------------
+*/
+Route::get('/demo', fn() => view('welcome'))->name('demo');
 
 // Magic Link Attendance (Public)
 Route::get('/absensi/{token}', [PublicAttendanceController::class, 'show'])
