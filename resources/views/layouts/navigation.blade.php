@@ -98,3 +98,9 @@
         </div>
     </div>
 </nav>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                            Logout
+                        </button>
+                    </form>
