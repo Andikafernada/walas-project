@@ -9,6 +9,7 @@ use App\Models\Attendance;
 use App\Models\Schedule;
 use App\Models\WaQueue;
 use App\Models\Violation;
+use App\Models\WhatsAppSession;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -37,6 +38,11 @@ class DashboardController extends Controller
             'weekly_violations' => $this->getWeeklyViolations($user),
         ];
 
+        // WhatsApp status
+        $whatsappConnected = WhatsAppSession::where('user_id', $user->id)
+            ->where('status', 'connected')
+            ->exists();
+
         // Recent activities with eager loading
         $recentAttendances = Attendance::where('user_id', $user->id)
             ->with(['student', 'student.classModel'])
@@ -54,7 +60,8 @@ class DashboardController extends Controller
             'classes',
             'stats',
             'recentAttendances',
-            'recentViolations'
+            'recentViolations',
+            'whatsappConnected'
         ));
     }
 

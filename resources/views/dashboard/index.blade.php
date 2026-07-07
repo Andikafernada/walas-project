@@ -71,7 +71,7 @@
                 </div>
                 <div>
                     <p class="text-2xl font-bold text-gray-800">{{ $stats['pending_messages'] }}</p>
-                    <p class="text-xs text-gray-500">Pesan Pending</p>
+                    <p class="text-xs text-gray-500">WhatsApp Bot</p>
                 </div>
             </div>
         </div>
@@ -153,8 +153,8 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="font-medium text-purple-800">Kirim Pesan WA</p>
-                        <p class="text-xs text-purple-600">Bulk message ke orang tua</p>
+                        <p class="font-medium text-purple-800">Buat WhatsApp Bot</p>
+                        <p class="text-xs text-purple-600">Auto kirim magic link via WA</p>
                     </div>
                 </a>
                 <a href="{{ route('reports.attendance') }}" class="flex items-center p-3 bg-amber-50 hover:bg-amber-100 rounded-xl transition">
