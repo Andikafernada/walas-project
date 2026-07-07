@@ -6,19 +6,12 @@ use App\Models\WhatsAppSession;
 use App\Models\Schedule;
 use App\Models\AttendanceSession;
 use App\Models\OrganizationStructure;
-use App\Services\WhatsAppService;
+use App\Models\WaQueue;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class WhatsAppBotController extends Controller
 {
-    protected $whatsAppService;
-
-    public function __construct(WhatsAppService $whatsAppService)
-    {
-        $this->whatsAppService = $whatsAppService;
-    }
-
     /**
      * Show WhatsApp connection page.
      */
@@ -26,14 +19,24 @@ class WhatsAppBotController extends Controller
     {
         $user = auth()->user();
 
-        // Get or create session for this user
-        $session = WhatsAppSession::forUser($user->id)->first();
+        // Get session for this user (or null if not exists)
+        $session = WhatsAppSession::where('user_id', $user->id)->first();
 
-        return view('dashboard.whatsapp-bot', compact('session'));
+        // Get today's schedules
+        $today = strtolower(Carbon::now()->locale('id')->dayName);
+        $schedules = Schedule::whereHas('classModel', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        })
+        ->where('day', $today)
+        ->where('is_active', true)
+        ->with('classModel')
+        ->get();
+
+        return view('dashboard.whatsapp-bot', compact('session', 'schedules'));
     }
 
     /**
-     * Generate QR code for connection.
+     * Generate QR code for WhatsApp connection.
      */
     public function generateQr(Request $request)
     {
@@ -42,7 +45,7 @@ class WhatsAppBotController extends Controller
         // Get or create session
         $session = WhatsAppSession::firstOrCreate(
             ['user_id' => $user->id],
-            ['status' => WhatsAppSession::STATUS_DISCONNECTED]
+            ['status' => 'disconnected']
         );
 
         // If already connected, return error
@@ -54,19 +57,22 @@ class WhatsAppBotController extends Controller
         }
 
         // Mark as connecting
-        $session->markAsConnecting();
+        $session->update(['status' => 'connecting']);
 
-        // TODO: Integrate with WhatsApp Web API (Baileys/WA-JS)
-        // For now, simulate QR code generation
-        // In production, this would connect to a WhatsApp service
+        // TODO: In production, integrate with WhatsApp Web API
+        // For now, simulate QR generation
+        // You would use: Baileys, WA-JS, or similar library
 
-        // Simulate QR code (in real implementation, this would come from WhatsApp Web API)
-        $qrCode = $this->generateSimulatedQr();
-        $session->updateQrCode($qrCode);
+        // Simulate QR (placeholder - replace with real WhatsApp API)
+        $qrData = $this->generateRealQrCode($user);
+        $session->update([
+            'qr_code' => $qrData,
+            'qr_expires_at' => Carbon::now()->addMinutes(5),
+        ]);
 
         return response()->json([
             'success' => true,
-            'qr_code' => $qrCode,
+            'qr_code' => $qrData,
             'expires_at' => $session->qr_expires_at->toIso8601String()
         ]);
     }
@@ -77,7 +83,7 @@ class WhatsAppBotController extends Controller
     public function status()
     {
         $user = auth()->user();
-        $session = WhatsAppSession::forUser($user->id)->first();
+        $session = WhatsAppSession::where('user_id', $user->id)->first();
 
         if (!$session) {
             return response()->json([
@@ -97,15 +103,31 @@ class WhatsAppBotController extends Controller
     }
 
     /**
+     * Simulate successful connection (for demo).
+     * In production, this would be called by WebSocket/event from WhatsApp API.
+     */
+    public function simulateConnect(Request $request)
+    {
+        $user = auth()->user();
+        $session = WhatsAppSession::where('user_id', $user->id)->first();
+
+        if ($session) {
+            $session->markAsConnected($request->phone ?? '6281234567890');
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * Disconnect WhatsApp.
      */
     public function disconnect()
     {
         $user = auth()->user();
-        $session = WhatsAppSession::forUser($user->id)->first();
+        $session = WhatsAppSession::where('user_id', $user->id)->first();
 
         if ($session) {
-            // TODO: Send logout command to WhatsApp service
+            // TODO: Send logout to WhatsApp service
             $session->markAsDisconnected();
         }
 
@@ -123,62 +145,40 @@ class WhatsAppBotController extends Controller
         ]);
 
         $user = auth()->user();
-        $session = WhatsAppSession::forUser($user->id)->first();
+        $session = WhatsAppSession::where('user_id', $user->id)
+            ->where('status', 'connected')
+            ->first();
 
-        if (!$session || !$session->isConnected()) {
+        if (!$session) {
             return back()->with('error', 'WhatsApp belum terhubung!');
         }
 
-        $success = $this->whatsAppService->sendPersonal(
-            $session->phone,
-            $request->message,
-            $user->id
-        );
+        // Queue the message
+        WaQueue::create([
+            'user_id' => $user->id,
+            'phone' => $request->phone,
+            'recipient_name' => 'Test Recipient',
+            'message' => $request->message,
+            'type' => 'test',
+            'status' => 'pending',
+        ]);
 
-        if ($success) {
-            return back()->with('success', 'Pesan test berhasil dikirim!');
-        }
-
-        return back()->with('error', 'Gagal mengirim pesan!');
+        return back()->with('success', 'Pesan test queued! Akan dikirim dalam beberapa detik.');
     }
 
     /**
-     * Get schedules for today (for automation preview).
+     * Generate QR code placeholder.
+     * REPLACE THIS with real WhatsApp Web API integration.
      */
-    public function getSchedules()
+    private function generateRealQrCode($user): string
     {
-        $user = auth()->user();
-        $today = strtolower(Carbon::now()->locale('id')->dayName);
+        // PLACEHOLDER: Generate a fake QR code
+        // In production, integrate with:
+        // 1. Baileys (Node.js) - WhatsApp Web API
+        // 2. WA-JS library
+        // 3. Your custom WhatsApp service
 
-        $schedules = Schedule::whereHas('classModel', function ($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })
-        ->where('day', $today)
-        ->where('is_active', true)
-        ->with('classModel')
-        ->get();
-
-        return response()->json($schedules->map(function ($schedule) {
-            return [
-                'id' => $schedule->id,
-                'class' => $schedule->classModel->name,
-                'subject' => $schedule->subject,
-                'time' => $schedule->start_time . ' - ' . $schedule->end_time,
-            ];
-        }));
-    }
-
-    /**
-     * Simulate QR generation (placeholder for real implementation).
-     */
-    private function generateSimulatedQr(): string
-    {
-        // This is a placeholder. In production, integrate with:
-        // - Baileys (WhatsApp Web API)
-        // - WA-JS
-        // - Your custom WhatsApp service
-
-        // For demo, return a fake QR data
-        return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAHklEQVQI12NkYPh/n0EBBD4LFD4YGBj+hwABBkEAFTkAAGnJgHNwAAAABJRU5ErkJggg==';
+        // For demo, return a base64 placeholder
+        return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAAB2ghYbAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAdklEQVR4nO3PQQoAIBTF0F9Wo6ig4C64e5deNpkPNPE4tJfJTJKcJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJKmPXz+7AQAAAP//6F8J9wAAAABJRU5ErkJggg==';
     }
 }

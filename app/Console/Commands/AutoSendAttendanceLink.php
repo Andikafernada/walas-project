@@ -3,18 +3,17 @@
 namespace App\Console\Commands;
 
 use App\Models\Schedule;
-use App\Models\ClassModel;
 use App\Models\AttendanceSession;
 use App\Models\OrganizationStructure;
 use App\Models\WhatsAppSession;
-use App\Models\User;
+use App\Models\WaQueue;
 use Illuminate\Console\Command;
 use Carbon\Carbon;
 
 class AutoSendAttendanceLink extends Command
 {
     protected $signature = 'walas:auto-attendance';
-    protected $description = 'Auto send attendance magic link based on schedule';
+    protected $description = 'Auto send attendance magic link based on schedule for ALL users';
 
     public function handle()
     {
@@ -23,62 +22,69 @@ class AutoSendAttendanceLink extends Command
         $now = Carbon::now();
         $today = strtolower($now->locale('id')->dayName);
         $currentTime = $now->format('H:i');
+        $todayDate = $now->toDateString();
 
-        // Get schedules for today
+        // Get schedules that match current time
         $schedules = Schedule::where('day', $today)
             ->where('is_active', true)
             ->whereTime('start_time', '<=', $currentTime)
-            ->whereTime('end_time', '>=', $currentTime)
             ->with('classModel')
             ->get();
 
-        $this->info("Found {$schedules->count()} schedules for {$today} at {$currentTime}");
+        $this->info("Checking {$schedules->count()} schedules for {$today} at {$currentTime}");
+
+        $sent = 0;
+        $skipped = 0;
 
         foreach ($schedules as $schedule) {
             $class = $schedule->classModel;
             $user = $class->user;
 
             if (!$user) {
-                $this->warn("No user for class: {$class->name}");
+                $this->warn("  No user for class: {$class->name}");
+                $skipped++;
                 continue;
             }
 
-            // Check if user has WhatsApp connected
+            // Check if user's WhatsApp is connected
             $waSession = WhatsAppSession::where('user_id', $user->id)
                 ->where('status', 'connected')
                 ->first();
 
             if (!$waSession) {
-                $this->warn("User {$user->name} has no WhatsApp connected");
+                $this->warn("  User {$user->name}: WhatsApp not connected");
+                $skipped++;
                 continue;
             }
 
-            // Check if attendance session already exists for today
+            // Check if attendance already exists today for this class
             $existingSession = AttendanceSession::where('class_id', $class->id)
-                ->whereDate('date', $now->toDateString())
+                ->whereDate('date', $todayDate)
                 ->first();
 
             if ($existingSession) {
-                $this->info("Attendance already exists for class: {$class->name}");
+                $this->info("  Class {$class->name}: Already has attendance for today");
+                $skipped++;
                 continue;
             }
 
             // Create attendance session
             $attendanceSession = $this->createAttendanceSession($class, $user, $schedule);
 
-            // Get Seksi Absensi student
+            // Get Seksi Absensi
             $seksiAbsensi = $this->getSeksiAbsensi($class);
 
             if ($seksiAbsensi && $seksiAbsensi->parent_whatsapp) {
-                // Send WhatsApp message
-                $this->sendAttendanceLink($user, $seksiAbsensi, $attendanceSession);
-                $this->info("Sent attendance link to Seksi Absensi for class: {$class->name}");
+                // Queue WhatsApp message
+                $this->sendAttendanceLink($user, $seksiAbsensi, $attendanceSession, $class);
+                $this->info("  ✓ Sent to {$seksiAbsensi->student->name} for class {$class->name}");
+                $sent++;
             } else {
-                $this->warn("No Seksi Absensi found for class: {$class->name}");
+                $this->warn("  No Seksi Absensi for class: {$class->name}");
             }
         }
 
-        $this->info('Auto attendance link sender completed!');
+        $this->info("Completed! Sent: {$sent}, Skipped: {$skipped}");
     }
 
     protected function createAttendanceSession($class, $user, $schedule)
@@ -100,17 +106,22 @@ class AutoSendAttendanceLink extends Command
 
     protected function getSeksiAbsensi($class)
     {
+        $academicYear = now()->year . '-' . (now()->year + 1);
+
         return OrganizationStructure::where('class_id', $class->id)
-            ->whereIn('position', ['seksi_kehadiran', 'seksi_absensi', 'seksi_attendance'])
+            ->where(function ($q) {
+                $q->where('position', 'seksi_kehadiran')
+                  ->orWhere('position', 'seksi_absensi')
+                  ->orWhere('position', 'seksi_attendance');
+            })
             ->where('is_active', true)
-            ->where('academic_year', now()->year . '-' . (now()->year + 1))
+            ->where('academic_year', $academicYear)
             ->with('student')
             ->first();
     }
 
-    protected function sendAttendanceLink($user, $seksiAbsensi, $attendanceSession)
+    protected function sendAttendanceLink($user, $seksiAbsensi, $attendanceSession, $class)
     {
-        $class = $seksiAbsensi->classModel;
         $student = $seksiAbsensi->student;
         $magicLink = url('/absensi/' . $attendanceSession->token);
 
@@ -122,15 +133,15 @@ class AutoSendAttendanceLink extends Command
         $message .= "⏰ Batas waktu: 15:00 WIB\n\n";
         $message .= "_Jangan sebarkan link ini!_";
 
-        // Use WhatsApp queue
-        \App\Models\WaQueue::create([
+        // Create queue entry
+        WaQueue::create([
             'user_id' => $user->id,
             'student_id' => $seksiAbsensi->student_id,
             'phone' => $student->parent_whatsapp,
             'recipient_name' => $student->father_name ?? $student->name,
             'message' => $message,
-            'type' => 'attendance',
-            'status' => 'pending',
+            'type' => WaQueue::TYPE_ATTENDANCE,
+            'status' => WaQueue::STATUS_PENDING,
         ]);
     }
 }
