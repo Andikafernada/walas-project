@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -29,14 +30,24 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        // Add columns to users table for Google OAuth and role
+        // Add columns to users table only if they don't exist
         Schema::table('users', function (Blueprint $table) {
-            $table->string('google_id')->nullable()->after('email');
-            $table->string('avatar')->nullable()->after('google_id');
-            $table->foreignId('organization_id')->nullable()->constrained()->nullOnDelete()->after('avatar');
-            $table->string('role')->default('walas')->after('organization_id'); // super_admin, admin, walas
-            $table->string('phone')->nullable()->after('role');
-            $table->boolean('is_active')->default(true)->after('phone');
+            if (!Schema::hasColumn('users', 'google_id')) {
+                $table->string('google_id')->nullable()->after('email');
+            }
+            if (!Schema::hasColumn('users', 'avatar')) {
+                $table->string('avatar')->nullable()->after('google_id');
+            }
+            if (!Schema::hasColumn('users', 'organization_id')) {
+                $table->foreignId('organization_id')->nullable()->constrained()->nullOnDelete()->after('avatar');
+            }
+            if (!Schema::hasColumn('users', 'role')) {
+                $table->string('role')->default('walas')->after('organization_id');
+            }
+            // Note: phone might already exist, so we skip it
+            if (!Schema::hasColumn('users', 'is_active')) {
+                $table->boolean('is_active')->default(true)->after('role');
+            }
         });
     }
 
@@ -46,8 +57,15 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropColumn(['google_id', 'avatar', 'organization_id', 'role', 'phone', 'is_active']);
+            $columns = ['google_id', 'avatar', 'organization_id', 'role', 'is_active'];
+            foreach ($columns as $column) {
+                if (Schema::hasColumn('users', $column)) {
+                    if ($column === 'organization_id') {
+                        $table->dropForeign(['organization_id']);
+                    }
+                    $table->dropColumn($column);
+                }
+            }
         });
 
         Schema::dropIfExists('organizations');
