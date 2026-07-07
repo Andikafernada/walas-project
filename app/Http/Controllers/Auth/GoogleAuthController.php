@@ -127,7 +127,7 @@ class GoogleAuthController extends Controller
                 $organization = Organization::findOrFail($request->organization_id);
             }
 
-            // Create user
+            // Create user (password is required but can be null for Google OAuth)
             $user = User::create([
                 'name' => $googleUser['name'],
                 'email' => $googleUser['email'],
@@ -135,6 +135,7 @@ class GoogleAuthController extends Controller
                 'avatar' => $googleUser['avatar'],
                 'organization_id' => $organization->id,
                 'role' => User::ROLE_WALAS,
+                'password' => bcrypt(Str::random(32)), // Random password for Google users
                 'email_verified_at' => now(), // Auto verify for Google users
                 'is_active' => true,
             ]);
