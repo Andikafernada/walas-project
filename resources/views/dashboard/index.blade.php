@@ -97,7 +97,7 @@
                             </div>
                             <div class="flex items-center gap-4">
                                 <div class="text-right">
-                                    <p class="text-sm font-medium text-gray-800">{{ $class->student_count ?? 0 }} siswa</p>
+                                    <p class="text-sm font-medium text-gray-800">{{ $class->students()->where('is_active', true)->count() }} siswa</p>
                                     <p class="text-xs text-gray-500">{{ $class->school_year_start }}/{{ $class->school_year_end }}</p>
                                 </div>
                                 <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

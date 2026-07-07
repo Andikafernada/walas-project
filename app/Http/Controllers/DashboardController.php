@@ -18,13 +18,15 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        // Get classes with eager loading
-        $classes = $user->classes()->withCount('students')->get();
+        // Get classes - DON'T use withCount since table name is 'classes'
+        // Use manual count instead
+        $classes = $user->classes()->get();
 
-        // Optimized: Single query for total students
-        $totalStudents = Student::whereIn('class_id', $classes->pluck('id'))
-            ->where('is_active', true)
-            ->count();
+        // Manual count for students
+        $classIds = $classes->pluck('id')->toArray();
+        $totalStudents = count($classIds) > 0
+            ? Student::whereIn('class_id', $classIds)->where('is_active', true)->count()
+            : 0;
 
         // Stats
         $stats = [
