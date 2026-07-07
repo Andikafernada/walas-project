@@ -132,7 +132,7 @@
                     </div>
                     <div>
                         <p class="font-medium text-blue-800">Buat Absensi</p>
-                        <p class="text-xs text-blue-600">Generate magic link</p>
+                        <p class="text-xs text-blue-600">Generate magic link WA</p>
                     </div>
                 </a>
                 <a href="{{ route('classes.index') }}" class="flex items-center p-3 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition">
@@ -146,26 +146,26 @@
                         <p class="text-xs text-emerald-600">Registrasi siswa baru</p>
                     </div>
                 </a>
-                <a href="{{ route('classes.index') }}" class="flex items-center p-3 bg-amber-50 hover:bg-amber-100 rounded-xl transition">
-                    <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center mr-3">
-                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16.646c-.77 1.333.192 3 1.732 3z"/>
+                <a href="{{ route('wa-queue.index') }}" class="flex items-center p-3 bg-purple-50 hover:bg-purple-100 rounded-xl transition">
+                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-5.682 2.022M3 12c0-4.418 4.03-8 9-8 4.97 0 8.682 3.604 9 8 2.022"/>
                         </svg>
                     </div>
                     <div>
-                        <p class="font-medium text-amber-800">Catat Pelanggaran</p>
-                        <p class="text-xs text-amber-600">Input poin pelanggaran</p>
+                        <p class="font-medium text-purple-800">Kirim Pesan WA</p>
+                        <p class="text-xs text-purple-600">Bulk message ke orang tua</p>
                     </div>
                 </a>
-                <a href="{{ route('reports.attendance') }}" class="flex items-center p-3 bg-purple-50 hover:bg-purple-100 rounded-xl transition">
-                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <a href="{{ route('reports.attendance') }}" class="flex items-center p-3 bg-amber-50 hover:bg-amber-100 rounded-xl transition">
+                    <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                     </div>
                     <div>
-                        <p class="font-medium text-purple-800">Lihat Laporan</p>
-                        <p class="text-xs text-purple-600">Summary laporan</p>
+                        <p class="font-medium text-amber-800">Lihat Laporan</p>
+                        <p class="text-xs text-amber-600">Summary laporan</p>
                     </div>
                 </a>
             </div>

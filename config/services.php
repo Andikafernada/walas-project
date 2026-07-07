@@ -46,4 +46,24 @@ return [
         'redirect' => env('APP_URL') . '/auth/google/callback',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | WhatsApp Gateway (n8n)
+    |--------------------------------------------------------------------------
+    */
+    'n8n' => [
+        'webhook_url' => env('WA_GATEWAY_URL'),
+        'secret_token' => env('WA_GATEWAY_TOKEN'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | WhatsApp API (Fonnte)
+    |--------------------------------------------------------------------------
+    */
+    'fonnte' => [
+        'api_key' => env('WA_API_TOKEN'),
+        'url' => env('WA_API_URL', 'https://mu.fonnte.com/api/send'),
+    ],
+
 ];
