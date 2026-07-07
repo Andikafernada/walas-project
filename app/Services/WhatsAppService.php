@@ -33,13 +33,14 @@ class WhatsAppService
 
             // Send via n8n webhook
             $webhookUrl = config('services.n8n.webhook_url');
+            $webhookToken = config('services.n8n.secret_token');
 
             if ($webhookUrl) {
                 $response = Http::timeout(30)
-                    ->post($webhookUrl . '/whatsapp/send', [
+                    ->post($webhookUrl . '/webhook/whatsapp-send', [
                         'phone' => $phone,
                         'message' => $message,
-                        'token' => config('services.n8n.secret_token'),
+                        'token' => $webhookToken,
                     ]);
 
                 if ($response->successful()) {
