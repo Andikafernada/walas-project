@@ -77,7 +77,13 @@ class GoogleAuthController extends Controller
         $googleUser = session('google_user');
 
         if (!$googleUser) {
-            return redirect()->route('login');
+            \Log::warning('Google OAuth - Session google_user not found in setup', [
+                'session_id' => session()->getId(),
+            ]);
+
+            return redirect()->route('login')->withErrors([
+                'email' => 'Sesi login Google sudah habis. Silakan coba lagi.',
+            ]);
         }
 
         // Get existing organizations for search
@@ -107,7 +113,11 @@ class GoogleAuthController extends Controller
         $googleUser = session('google_user');
 
         if (!$googleUser) {
-            return redirect()->route('login');
+            \Log::warning('Google OAuth - Session google_user not found in completeRegistration');
+
+            return redirect()->route('login')->withErrors([
+                'email' => 'Sesi login Google sudah habis. Silakan coba lagi.',
+            ]);
         }
 
         try {
@@ -153,8 +163,16 @@ class GoogleAuthController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
+            // Log the actual error
+            \Log::error('Google OAuth Registration Error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return redirect()->back()->withErrors([
-                'organization_name' => 'Terjadi kesalahan. Silakan coba lagi.',
+                'organization_name' => 'Terjadi kesalahan: ' . $e->getMessage(),
             ])->withInput();
         }
     }
