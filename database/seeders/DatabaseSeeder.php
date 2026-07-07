@@ -7,6 +7,7 @@ use App\Models\AttendanceSession;
 use App\Models\CashBook;
 use App\Models\ClassModel;
 use App\Models\Journal;
+use App\Models\Organization;
 use App\Models\OrganizationStructure;
 use App\Models\Schedule;
 use App\Models\SeatingChart;
@@ -14,6 +15,7 @@ use App\Models\Student;
 use App\Models\User;
 use App\Models\Violation;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -22,12 +24,52 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create demo user
+        // Create Walas Platform organization
+        $walasOrg = Organization::firstOrCreate(
+            ['slug' => 'walas-platform'],
+            [
+                'name' => 'Walas Platform',
+                'type' => 'others',
+                'city' => 'Jakarta',
+                'email' => 'admin@walas.my.id',
+                'status' => 'active',
+            ]
+        );
+
+        // Create Super Admin
+        User::firstOrCreate(
+            ['email' => 'superadmin@walas.my.id'],
+            [
+                'name' => 'Super Admin',
+                'email' => 'superadmin@walas.my.id',
+                'password' => Hash::make('password'),
+                'organization_id' => $walasOrg->id,
+                'role' => User::ROLE_SUPER_ADMIN,
+                'email_verified_at' => now(),
+                'is_active' => true,
+            ]
+        );
+
+        $this->command->info('Super Admin created: superadmin@walas.my.id / password');
+
+        // Create demo user with organization
+        $demoOrg = Organization::firstOrCreate(
+            ['slug' => 'smp-negeri-1-jakarta'],
+            [
+                'name' => 'SMP Negeri 1 Jakarta',
+                'type' => 'smp',
+                'city' => 'Jakarta Pusat',
+                'email' => 'info@smpn1jkt.sch.id',
+                'status' => 'active',
+            ]
+        );
+
         $user = User::factory()->create([
             'name' => 'Budi Santoso',
             'email' => 'budi@sekolah.sch.id',
             'phone' => '6281234567890',
-            'school_name' => 'SMA Negeri 1 Jakarta',
+            'organization_id' => $demoOrg->id,
+            'role' => User::ROLE_WALAS,
             'tier' => 'pro',
             'is_active' => true,
         ]);

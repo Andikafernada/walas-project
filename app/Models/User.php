@@ -3,23 +3,31 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable, SoftDeletes;
 
+    // Role constants
+    const ROLE_SUPER_ADMIN = 'super_admin';
+    const ROLE_ADMIN = 'admin';
+    const ROLE_WALAS = 'walas';
+
     protected $fillable = [
         'name',
         'email',
         'password',
+        'google_id',
+        'avatar',
+        'organization_id',
+        'role',
         'phone',
         'school_name',
-        'avatar',
-        'role',
         'tier',
         'subscription_expires_at',
         'is_active',
@@ -41,6 +49,11 @@ class User extends Authenticatable
     }
 
     // Relations
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
     public function classes(): HasMany
     {
         return $this->hasMany(\App\Models\ClassModel::class);
@@ -103,5 +116,64 @@ class User extends Authenticatable
             return true;
         }
         return $this->subscription_expires_at && $this->subscription_expires_at->isFuture();
+    }
+
+    public function getIsSuperAdminAttribute(): bool
+    {
+        return $this->role === self::ROLE_SUPER_ADMIN;
+    }
+
+    public function getIsAdminAttribute(): bool
+    {
+        return in_array($this->role, [self::ROLE_SUPER_ADMIN, self::ROLE_ADMIN]);
+    }
+
+    public function getRoleLabelAttribute(): string
+    {
+        return match($this->role) {
+            self::ROLE_SUPER_ADMIN => 'Super Admin',
+            self::ROLE_ADMIN => 'Admin Sekolah',
+            self::ROLE_WALAS => 'Wali Kelas',
+            default => $this->role,
+        };
+    }
+
+    public function getAvatarUrlAttribute(): string
+    {
+        if ($this->avatar) {
+            return $this->avatar;
+        }
+
+        if ($this->google_id) {
+            return "https://ui-avatars.com/api/?name=" . urlencode($this->name) . "&background=2563eb&color=fff&size=128";
+        }
+
+        return "https://ui-avatars.com/api/?name=" . urlencode($this->name) . "&background=2563eb&color=fff&size=128";
+    }
+
+    // Scopes
+    public function scopeSuperAdmins($query)
+    {
+        return $query->where('role', self::ROLE_SUPER_ADMIN);
+    }
+
+    public function scopeAdmins($query)
+    {
+        return $query->whereIn('role', [self::ROLE_SUPER_ADMIN, self::ROLE_ADMIN]);
+    }
+
+    public function scopeWalas($query)
+    {
+        return $query->where('role', self::ROLE_WALAS);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeOfOrganization($query, $organizationId)
+    {
+        return $query->where('organization_id', $organizationId);
     }
 }

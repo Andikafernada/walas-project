@@ -32,12 +32,28 @@ Route::get('/', fn() => view('welcome'))->name('welcome');
 */
 Route::get('/demo', fn() => view('welcome'))->name('demo');
 
-// Magic Link Attendance (Public)
+/*
+|--------------------------------------------------------------------------
+| Magic Link Attendance (Public)
+|--------------------------------------------------------------------------
+*/
 Route::get('/absensi/{token}', [PublicAttendanceController::class, 'show'])
     ->name('public.attendance.show');
 
 Route::post('/absensi/{session}/submit', [PublicAttendanceController::class, 'submit'])
     ->name('public.attendance.submit');
+
+/*
+|--------------------------------------------------------------------------
+| Google OAuth Routes
+|--------------------------------------------------------------------------
+*/
+Route::prefix('auth')->group(function () {
+    Route::get('/google', [App\Http\Controllers\Auth\GoogleAuthController::class, 'redirect'])->name('auth.google');
+    Route::get('/google/callback', [App\Http\Controllers\Auth\GoogleAuthController::class, 'callback'])->name('auth.google.callback');
+    Route::get('/setup', [App\Http\Controllers\Auth\GoogleAuthController::class, 'setup'])->name('auth.setup');
+    Route::post('/setup', [App\Http\Controllers\Auth\GoogleAuthController::class, 'completeRegistration'])->name('auth.setup.complete');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -265,6 +281,25 @@ Route::middleware(['auth', 'verified', 'activity'])->group(function () {
             ->name('api-tokens.store');
         Route::delete('/{token}', [ApiTokenController::class, 'destroy'])
             ->name('api-tokens.destroy');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin Routes (Super Admin Only)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('admin')->middleware(['auth', 'role:super_admin'])->group(function () {
+    Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])
+        ->name('admin.dashboard');
+
+    Route::prefix('organizations')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\OrganizationController::class, 'index'])
+            ->name('admin.organizations.index');
+        Route::get('/{organization}', [App\Http\Controllers\Admin\OrganizationController::class, 'show'])
+            ->name('admin.organizations.show');
+        Route::patch('/{organization}/status', [App\Http\Controllers\Admin\OrganizationController::class, 'updateStatus'])
+            ->name('admin.organizations.update-status');
     });
 });
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\CheckSubscription;
 use App\Http\Middleware\EnsureTenantOwnership;
 use App\Http\Middleware\LogActivity;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'subscription' => CheckSubscription::class,
             'api.token' => ValidateApiToken::class,
             'activity' => LogActivity::class,
+            'role' => CheckRole::class,
         ]);
 
         // Add to web middleware group
