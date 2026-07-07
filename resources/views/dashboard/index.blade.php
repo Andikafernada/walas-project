@@ -22,7 +22,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold mb-1">Selamat Datang, {{ auth()->user()->name }}! 👋</h1>
-                <p class="text-blue-100">{{ auth()->user()->school_name ?? 'SMK Indonesia' }}</p>
+                <p class="text-blue-100">{{ auth()->user()->organization?->name ?? 'Walas User' }}</p>
             </div>
             <div class="text-right">
                 <p class="text-3xl font-bold">{{ now()->format('d') }}</p>
@@ -77,13 +77,13 @@
 
         <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-{{ $stats['today_attendance_done'] ? 'emerald' : 'gray' }}-100 rounded-xl flex items-center justify-center">
-                    <svg class="w-5 h-5 text-{{ $stats['today_attendance_done'] ? 'emerald' : 'gray' }}-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <div class="w-10 h-10 bg-{{ ($stats['today_attendance']['completed'] ?? 0) > 0 ? 'emerald' : 'gray' }}-100 rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-{{ ($stats['today_attendance']['completed'] ?? 0) > 0 ? 'emerald' : 'gray' }}-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="text-2xl font-bold text-gray-800">{{ $stats['today_attendance_done'] ? 'Sudah' : 'Belum' }}</p>
+                    <p class="text-2xl font-bold text-gray-800">{{ ($stats['today_attendance']['completed'] ?? 0) > 0 ? 'Sudah' : 'Belum' }}</p>
                     <p class="text-xs text-gray-500">Absensi Hari Ini</p>
                 </div>
             </div>
